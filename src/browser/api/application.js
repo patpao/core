@@ -619,6 +619,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
+        //maybe here
+        sendAppsEventsToRVMListener({ type: 'app-loaded' });
+
         //edge case where the window might be destroyed by the time we get here.
         if (!app.mainWindow.isDestroyed()) {
             const pid = app.mainWindow.webContents.processId;
@@ -681,6 +684,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
 
         coreState.removeApp(app.id);
+
+        // closed maybe
+        sendAppsEventsToRVMListener({ type: 'app-fully-closed' });
 
         const shouldCloseRuntime =
             app._options._type !== ERROR_BOX_TYPES.RENDERER_CRASH &&
