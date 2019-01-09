@@ -318,7 +318,7 @@ module.exports = (grunt) => {
     */
     grunt.registerTask('submodules-update', () => {
         grunt.log.subhead('Updating submodules...');
-        childProcess.execSync('git submodule update --init --recursive');
+        //childProcess.execSync('git submodule update --init --recursive');
 
         grunt.log.subhead('Installing js-adapter dependencies...');
         childProcess.execSync('cd js-adapter && npm install');

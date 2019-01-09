@@ -1,4 +1,4 @@
-import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
+import { rvmMessageBus, ConsoleMessage, RvmBulkMessagePart } from '../rvm/rvm_message_bus';
 import { System } from '../api/system';
 import { setTimeout } from 'timers';
 /**
@@ -15,15 +15,24 @@ interface SendToRVMOpts {
 
 const maxBytes: number = 1000000;  // 1 MB
 const defaultFlushInterval: number = 10000;  // 10 seconds
+const minRvmHeartbeatVersion: string = '4.7.0.0';
 
-let consoleMessageQueue: ConsoleMessage[] = [];
-let isFlushScheduled: boolean = false;
+let flushInterval: number = defaultFlushInterval;
+let consoleMessageQueue: RvmBulkMessagePart[] = [];
 let totalBytes: number = 0;
 let timer: NodeJS.Timer = null;
+let shouldSendHeartbeatMessage: boolean = false;
 
 function flushConsoleMessageQueue(): void {
     totalBytes = 0;
-    isFlushScheduled = false;
+
+    // Only send heartbeat for RVM's >= 4.7 to avoid older RVM's spamming the logs with
+    // "invalid message"
+    if (shouldSendHeartbeatMessage) {
+        consoleMessageQueue.push({
+            type: 'heartbeat-message'
+        });
+    }
 
     if (consoleMessageQueue.length <= 0) {
         return;
@@ -43,7 +52,7 @@ function flushConsoleMessageQueue(): void {
     sendToRVM(obj, true);
 }
 
-export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage, flushInterval?: number): void {
+export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
     consoleMessageQueue.push(consoleMessage);
 
     const byteLength = Buffer.byteLength(consoleMessage.message, 'utf8');
@@ -52,16 +61,34 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
     // If we have exceeded the byte threshold for messages, flush the queue immediately
     if (totalBytes >= maxBytes) {
         if (timer !== null) {
-            clearTimeout(timer);
-            timer = null;
+            clearInterval(timer);
         }
 
         flushConsoleMessageQueue();
 
-    // Otherwise if no timer already set, set one to flush the queue in 10s
-    } else if (!isFlushScheduled) {
-        isFlushScheduled = true;
-        timer = setTimeout(flushConsoleMessageQueue, flushInterval ? flushInterval : defaultFlushInterval);
+        timer = setInterval(flushConsoleMessageQueue, flushInterval);
+    }
+}
+
+export function startRVMMessageTimer(interval?:  number, rvmVersion? : string) {
+    if (timer) {
+        return;
+    }
+
+    if (interval) {
+        flushInterval = interval;
+    }
+
+    if (rvmVersion && rvmVersion >= minRvmHeartbeatVersion) {
+        shouldSendHeartbeatMessage = true;
+    }
+
+    timer = setInterval(flushConsoleMessageQueue, flushInterval);
+}
+
+export function stopRVMMessageTimer() {
+    if (timer) {
+        clearInterval(timer);
     }
 }
 

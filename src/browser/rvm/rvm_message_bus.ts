@@ -28,21 +28,30 @@ type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
 
 
-export interface ApplicationLog extends RvmMsgBase {
+export interface RvmBulkMessage extends RvmMsgBase {
     topic: applicationTopic;
     action: applicationLogAction;
     sourceUrl: string;
     runtimeVersion: string;
     payload: {
-        messages: ConsoleMessage[];
+        messages: RvmBulkMessagePart[];
     };
 }
 
-export interface ConsoleMessage {
+export interface RvmBulkMessagePart {
+    type: string;
+}
+
+export interface ConsoleMessage extends RvmBulkMessagePart {
+    type: 'console-message';
     appConfigUrl: string;
     level: number;
     message: string;
     timeStamp: string;
+}
+
+export interface HeartbeatMessage extends RvmBulkMessagePart {
+    type: 'heartbeat-message';
 }
 
 export interface RegisterUser extends RvmMsgBase {

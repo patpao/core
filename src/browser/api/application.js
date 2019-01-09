@@ -26,7 +26,7 @@ let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 import WindowGroups from '../window_groups';
-import { sendToRVM } from '../rvm/utils';
+import { sendToRVM, startRVMMessageTimer, stopRVMMessageTimer } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
@@ -611,6 +611,15 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.on(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
     });
 
+    // System.getRvmInfo(coreState.getAppByUuid(uuid), (rvmInfoObject) => {
+    //     startRVMMessageTimer(argo['--rvm-heartbeat-interval'], rvmInfoObject.version);
+    // }, (err) => {
+    //     console.error('Could not get RVM info:', err);
+    //     startRVMMessageTimer(argo['--rvm-heartbeat-interval']);
+    // });
+
+    startRVMMessageTimer( /*argo['--rvm-heartbeat-interval']*/ );
+
 
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
@@ -701,6 +710,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                         Application.close(a.identity, true);
                     }
                 }
+
+                stopRVMMessageTimer();
 
                 //deregister all proxy windows
                 deregisterAllRuntimeProxyWindows();
